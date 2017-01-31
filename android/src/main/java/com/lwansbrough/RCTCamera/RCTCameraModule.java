@@ -6,6 +6,7 @@
 package com.lwansbrough.RCTCamera;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -16,6 +17,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
+import android.view.WindowManager;
 import android.view.Surface;
 
 import com.drew.imaging.ImageMetadataReader;
@@ -79,7 +81,6 @@ public class RCTCameraModule extends ReactContextBaseJavaModule
     public static final int MEDIA_TYPE_VIDEO = 2;
 
     private static ReactApplicationContext _reactContext;
-    private RCTSensorOrientationChecker _sensorOrientationChecker;
 
     private MediaRecorder mMediaRecorder;
     private long MRStartTime;
@@ -92,7 +93,6 @@ public class RCTCameraModule extends ReactContextBaseJavaModule
     public RCTCameraModule(ReactApplicationContext reactContext) {
         super(reactContext);
         _reactContext = reactContext;
-        _sensorOrientationChecker = new RCTSensorOrientationChecker(_reactContext);
         _reactContext.addLifecycleEventListener(this);
     }
 
@@ -616,19 +616,9 @@ public class RCTCameraModule extends ReactContextBaseJavaModule
     public void capture(final ReadableMap options, final Promise promise) {
         int orientation = options.hasKey("orientation") ? options.getInt("orientation") : RCTCamera.getInstance().getOrientation();
         if (orientation == RCT_CAMERA_ORIENTATION_AUTO) {
-            _sensorOrientationChecker.onResume();
-            _sensorOrientationChecker.registerOrientationListener(new RCTSensorOrientationListener() {
-                @Override
-                public void orientationEvent() {
-                    int deviceOrientation = _sensorOrientationChecker.getOrientation();
-                    _sensorOrientationChecker.unregisterOrientationListener();
-                    _sensorOrientationChecker.onPause();
-                    captureWithOrientation(options, promise, deviceOrientation);
-                }
-            });
-        } else {
-            captureWithOrientation(options, promise, orientation);
+            orientation = ((WindowManager) _reactContext.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
         }
+        captureWithOrientation(options, promise, orientation);
     }
 
     private void captureWithOrientation(final ReadableMap options, final Promise promise, int deviceOrientation) {
